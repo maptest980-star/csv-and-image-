@@ -24,24 +24,36 @@ if image_file and annotation_file:
     
     try:
         df = pd.read_csv(annotation_file)
-        # Create a single confidence column using max confidence from all rotations
-        confidence_cols = [
+        
+        # Check if this is rotation-based CSV or single-column CSV
+        rotation_cols = [
             'confidence_0deg',
             'confidence_90deg',
             'confidence_180deg',
             'confidence_270deg'
         ]
-        df['confidence'] = df[confidence_cols].max(axis=1)
         
-        # Create a single extracted_text column using text from highest confidence rotation
-        text_cols = [
-            'extracted_text_0deg',
-            'extracted_text_90deg',
-            'extracted_text_180deg',
-            'extracted_text_270deg'
-        ]
-        # Get the first non-empty text across rotations, or empty string if all are empty
-        df['extracted_text'] = df[text_cols].bfill(axis=1).iloc[:, 0].fillna("")
+        if all(col in df.columns for col in rotation_cols):
+            # Type 1: Rotation-based CSV format
+            df['confidence'] = df[rotation_cols].max(axis=1)
+            
+            text_cols = [
+                'extracted_text_0deg',
+                'extracted_text_90deg',
+                'extracted_text_180deg',
+                'extracted_text_270deg'
+            ]
+            # Get the first non-empty text across rotations, or empty string if all are empty
+            df['extracted_text'] = df[text_cols].bfill(axis=1).iloc[:, 0].fillna("")
+        else:
+            # Type 2: Single-column CSV format
+            # Ensure confidence column exists
+            if 'confidence' not in df.columns:
+                df['confidence'] = 0.0
+            
+            # Ensure extracted_text column exists
+            if 'extracted_text' not in df.columns:
+                df['extracted_text'] = ""
         
     except Exception as e:
         st.error(f"Error reading CSV: {e}")
@@ -111,28 +123,14 @@ if image_file and annotation_file:
                     
                     st.divider()
                     
-                    # Text info - Display all rotation variants
-                    st.write("**Extracted Text (by Rotation):**")
-                    
-                    text_rotations = [
-                        ('0°', 'extracted_text_0deg'),
-                        ('90°', 'extracted_text_90deg'),
-                        ('180°', 'extracted_text_180deg'),
-                        ('270°', 'extracted_text_270deg')
-                    ]
-                    
-                    tabs = st.tabs([rotation[0] for rotation in text_rotations])
-                    
-                    for idx, (rotation_label, col_name) in enumerate(text_rotations):
-                        with tabs[idx]:
-                            if col_name in row.index:
-                                text = row[col_name]
-                                if isinstance(text, str) and text.strip() != "":
-                                    st.code(text)
-                                else:
-                                    st.write("_No text detected_")
-                            else:
-                                st.write("_Column not found_")
+                    # Text info
+                    text = row['extracted_text']
+
+                    if isinstance(text, str) and text.strip() != "":
+                        st.write("**Extracted Text:**")
+                        st.code(text)
+                    else:
+                        st.write("**Text:** No text detected")
                     
                     st.divider()
                     
