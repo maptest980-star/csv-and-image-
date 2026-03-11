@@ -1,7 +1,8 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageOps
+
 
 st.set_page_config(layout="wide")
 st.title("Image Annotation Viewer")
@@ -15,7 +16,9 @@ with col2:
 
 if image_file and annotation_file:
     # Load image and CSV
-    image = Image.open(image_file).convert("RGB")
+    image = Image.open(image_file)
+    image = ImageOps.exif_transpose(image)  # fixes orientation using EXIF
+    image = image.convert("RGB")
     img_array = np.array(image)
     height, width, _ = img_array.shape
     
@@ -157,3 +160,4 @@ if image_file and annotation_file:
 else:
 
     st.info("📤 Upload an image and CSV file to start")
+
