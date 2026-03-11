@@ -21,6 +21,14 @@ if image_file and annotation_file:
     
     try:
         df = pd.read_csv(annotation_file)
+        # Create a single confidence column using max confidence from all rotations
+        confidence_cols = [
+            'confidence_0deg',
+            'confidence_90deg',
+            'confidence_180deg',
+            'confidence_270deg'
+        ]
+        df['confidence'] = df[confidence_cols].max(axis=1)
     except Exception as e:
         st.error(f"Error reading CSV: {e}")
         df = None
@@ -147,4 +155,5 @@ if image_file and annotation_file:
             
             st.image(display_image, use_container_width=True)
 else:
+
     st.info("📤 Upload an image and CSV file to start")
