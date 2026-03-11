@@ -32,6 +32,17 @@ if image_file and annotation_file:
             'confidence_270deg'
         ]
         df['confidence'] = df[confidence_cols].max(axis=1)
+        
+        # Create a single extracted_text column using text from highest confidence rotation
+        text_cols = [
+            'extracted_text_0deg',
+            'extracted_text_90deg',
+            'extracted_text_180deg',
+            'extracted_text_270deg'
+        ]
+        # Get the first non-empty text across rotations, or empty string if all are empty
+        df['extracted_text'] = df[text_cols].bfill(axis=1).iloc[:, 0].fillna("")
+        
     except Exception as e:
         st.error(f"Error reading CSV: {e}")
         df = None
@@ -100,14 +111,28 @@ if image_file and annotation_file:
                     
                     st.divider()
                     
-                    # Text info
-                    if row['has_text'] == 'TRUE':
-                        st.write("**Extracted Text:**")
-                        st.code(str(row['extracted_text']))
-                        st.write(f"  • Chars: {int(row['char_count'])}")
-                        st.write(f"  • Numbers: {int(row['numeric_count'])}")
-                    else:
-                        st.write("**Text:** No text detected")
+                    # Text info - Display all rotation variants
+                    st.write("**Extracted Text (by Rotation):**")
+                    
+                    text_rotations = [
+                        ('0°', 'extracted_text_0deg'),
+                        ('90°', 'extracted_text_90deg'),
+                        ('180°', 'extracted_text_180deg'),
+                        ('270°', 'extracted_text_270deg')
+                    ]
+                    
+                    tabs = st.tabs([rotation[0] for rotation in text_rotations])
+                    
+                    for idx, (rotation_label, col_name) in enumerate(text_rotations):
+                        with tabs[idx]:
+                            if col_name in row.index:
+                                text = row[col_name]
+                                if isinstance(text, str) and text.strip() != "":
+                                    st.code(text)
+                                else:
+                                    st.write("_No text detected_")
+                            else:
+                                st.write("_Column not found_")
                     
                     st.divider()
                     
@@ -160,4 +185,3 @@ if image_file and annotation_file:
 else:
 
     st.info("📤 Upload an image and CSV file to start")
-
