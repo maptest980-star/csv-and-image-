@@ -29,6 +29,29 @@ if image_file and annotation_file:
     # Load and process CSV
     try:
         df = pd.read_csv(annotation_file)
+
+
+        # -------- CLEAN CSV DATA (IMPORTANT) --------
+
+        # Convert numeric columns safely
+        num_cols = [
+            'bbox_x', 'bbox_y', 'bbox_width', 'bbox_height',
+            'confidence', 'detic_confidence',
+            'char_count', 'numeric_count', 'ocr_confidence', 'yolo_confidence'
+        ]
+
+        for col in num_cols:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
+
+        # Convert boolean-like columns safely
+        bool_cols = ['has_text']
+        for col in bool_cols:
+            if col in df.columns:
+                df[col] = df[col].astype(str).str.upper().map({'TRUE': True, 'FALSE': False}).fillna(False)
+
+        # Ensure object_id is always string
+        df['object_id'] = df['object_id'].astype(str)
         
         # Ensure required columns exist
         required_cols = ['object_id', 'bbox_x', 'bbox_y', 'bbox_width', 'bbox_height']
@@ -69,11 +92,14 @@ if image_file and annotation_file:
         if 'identified_as' not in df.columns:
             df['identified_as'] = "Unknown"
         
-        # Extract mask_id (e.g., "mask_0" from "BrandingActivity_13516_09122025PM47811265_mask_0")
-        df['mask_id'] = df['object_id'].str.extract(r'(mask_\d+)')[0]
-        
-        # Get all unique mask IDs sorted
-        all_masks = sorted(df['mask_id'].unique().tolist())
+        # Extract mask_id
+        df['mask_id'] = df['object_id'].astype(str).str.extract(r'(mask_\d+)')[0]
+
+        # Clean mask_id column (VERY IMPORTANT)
+        df['mask_id'] = df['mask_id'].fillna('').astype(str)
+
+        # Remove empty values before sorting
+        all_masks = sorted([m for m in df['mask_id'].unique().tolist() if m])
             
     except Exception as e:
         st.error(f"Error reading CSV: {e}")
